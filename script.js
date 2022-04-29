@@ -1,70 +1,80 @@
-const notesContainer = document.getElementById("app");
-const addNoteButton = notesContainer.querySelector(".add-note");
+const resultEl = document.getElementById('result');
+const lengthEl = document.getElementById('length');
+const uppercaseEl = document.getElementById('uppercase');
+const lowercaseEl = document.getElementById('lowercase');
+const numbersEl = document.getElementById('numbers');
+const symbolsEl = document.getElementById('symbols');
+const generateEl = document.getElementById('generate');
+const clipboard = document.getElementById('clipboard');
 
-getNotes().forEach((note) => {
-  const noteElement = createNoteElement(note.id, note.content);
-  notesContainer.insertBefore(noteElement, addNoteButton);
+const randomFunc = {
+	lower: getRandomLower,
+	upper: getRandomUpper,
+	number: getRandomNumber,
+	symbol: getRandomSymbol
+}
+
+clipboard.addEventListener('click', () => {
+	const textarea = document.createElement('textarea');
+	const password = resultEl.innerText;
+	
+	if(!password) { return; }
+	
+	textarea.value = password;
+	document.body.appendChild(textarea);
+	textarea.select();
+	document.execCommand('copy');
+	textarea.remove();
+	alert('Password copied to clipboard');
 });
 
-addNoteButton.addEventListener("click", () => addNote());
+generate.addEventListener('click', () => {
+	const length = +lengthEl.value;
+	const hasLower = lowercaseEl.checked;
+	const hasUpper = uppercaseEl.checked;
+	const hasNumber = numbersEl.checked;
+	const hasSymbol = symbolsEl.checked;
+	
+	resultEl.innerText = generatePassword(hasLower, hasUpper, hasNumber, hasSymbol, length);
+});
 
-function getNotes() {
-  return JSON.parse(localStorage.getItem("stickynotes-notes") || "[]");
+function generatePassword(lower, upper, number, symbol, length) {
+	let generatedPassword = '';
+	const typesCount = lower + upper + number + symbol;
+	const typesArr = [{lower}, {upper}, {number}, {symbol}].filter(item => Object.values(item)[0]);
+	
+	// Doesn't have a selected type
+	if(typesCount === 0) {
+		return '';
+	}
+	
+	// create a loop
+	for(let i=0; i<length; i+=typesCount) {
+		typesArr.forEach(type => {
+			const funcName = Object.keys(type)[0];
+			generatedPassword += randomFunc[funcName]();
+		});
+	}
+	
+	const finalPassword = generatedPassword.slice(0, length);
+	
+	return finalPassword;
 }
 
-function saveNotes(notes) {
-  localStorage.setItem("stickynotes-notes", JSON.stringify(notes));
+function getRandomLower() {
+	return String.fromCharCode(Math.floor(Math.random() * 26) + 97);
 }
 
-function createNoteElement(id, content) {
-  const element = document.createElement("textarea");
-
-  element.classList.add("note");
-  element.value = content;
-  element.placeholder = "Empty Sticky Note";
-
-  element.addEventListener("change", () => {
-    updateNote(id, element.value);
-  });
-
-  element.addEventListener("dblclick", () => {
-    const doDelete = confirm(
-      "Are you sure you wish to delete this sticky note?"
-    );
-
-    if (doDelete) {
-      deleteNote(id, element);
-    }
-  });
-
-  return element;
+function getRandomUpper() {
+	return String.fromCharCode(Math.floor(Math.random() * 26) + 65);
 }
 
-function addNote() {
-  const notes = getNotes();
-  const noteObject = {
-    id: Math.floor(Math.random() * 100000),
-    content: ""
-  };
-
-  const noteElement = createNoteElement(noteObject.id, noteObject.content);
-  notesContainer.insertBefore(noteElement, addNoteButton);
-
-  notes.push(noteObject);
-  saveNotes(notes);
+function getRandomNumber() {
+	return +String.fromCharCode(Math.floor(Math.random() * 10) + 48);
 }
 
-function updateNote(id, newContent) {
-  const notes = getNotes();
-  const targetNote = notes.filter((note) => note.id == id)[0];
-
-  targetNote.content = newContent;
-  saveNotes(notes);
+function getRandomSymbol() {
+	const symbols = '!@#$%^&*(){}[]=<>/,.'
+	return symbols[Math.floor(Math.random() * symbols.length)];
 }
 
-function deleteNote(id, element) {
-  const notes = getNotes().filter((note) => note.id != id);
-
-  saveNotes(notes);
-  notesContainer.removeChild(element);
-}
